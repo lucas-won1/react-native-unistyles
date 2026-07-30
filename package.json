@@ -10,6 +10,7 @@
     "precommit": "bun run --cwd packages/unistyles precommit",
     "lint": "bun run --cwd packages/unistyles lint",
     "test": "bun run --cwd packages/unistyles test",
+    "test:ssr": "bun run --cwd packages/unistyles prepare && bun run --cwd apps/next-ssr-e2e test:e2e",
     "tsc": "bun run --cwd packages/unistyles tsc",
     "check": "bun run --cwd packages/unistyles check",
     "check:ci": "bun run --cwd packages/unistyles check:ci"
