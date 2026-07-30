@@ -1,4 +1,5 @@
-import type { ReactElement } from 'react'
+import React from 'react'
+import { renderToStaticMarkup } from 'react-dom/server'
 
 import { ServerUnistylesStyles } from '../server'
 import * as unistyles from '../web/services'
@@ -15,16 +16,9 @@ describe('ServerUnistylesStyles', () => {
             value: 'tomato',
         })
 
-        const element = ServerUnistylesStyles({ nonce: 'test-nonce' }) as ReactElement<{
-            children: string
-            nonce: string
-        }>
+        const markup = renderToStaticMarkup(<ServerUnistylesStyles nonce="test-nonce" />)
 
-        expect(element.type).toBe('style')
-        expect(element.props).toEqual({
-            children: '.unistyles_server{background-color:tomato;}',
-            nonce: 'test-nonce',
-        })
+        expect(markup).toBe('<style nonce="test-nonce">.unistyles_server{background-color:tomato;}</style>')
         expect(unistyles.services.registry.css.getStyles()).toBe('')
     })
 

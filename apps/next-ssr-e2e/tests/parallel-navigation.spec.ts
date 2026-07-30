@@ -70,3 +70,23 @@ test('includes destination server styles on a hard reload', async ({ page }) => 
         missingClasses: [],
     })
 })
+
+test('isolates styles between concurrent server renders', async ({ request }) => {
+    const slowResponsePromise = request.get('/concurrent/slow')
+
+    await new Promise(resolve => setTimeout(resolve, 30))
+
+    const [slowResponse, fastResponse] = await Promise.all([slowResponsePromise, request.get('/concurrent/fast')])
+    const [slowHTML, fastHTML] = await Promise.all([slowResponse.text(), fastResponse.text()])
+    const slowClassName = slowHTML.match(/data-class="(unistyles_[^"]+)"/)?.[1]
+    const fastClassName = fastHTML.match(/data-class="(unistyles_[^"]+)"/)?.[1]
+
+    expect(slowResponse.ok()).toBe(true)
+    expect(fastResponse.ok()).toBe(true)
+    expect(slowClassName).toBeTruthy()
+    expect(fastClassName).toBeTruthy()
+    expect(slowHTML).toContain(`.${slowClassName}{`)
+    expect(slowHTML).not.toContain(`.${fastClassName}{`)
+    expect(fastHTML).toContain(`.${fastClassName}{`)
+    expect(fastHTML).not.toContain(`.${slowClassName}{`)
+})

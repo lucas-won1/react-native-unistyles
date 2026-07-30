@@ -1,3 +1,8 @@
+import React from 'react'
+
+import type { UnistylesConfig } from '../specs/StyleSheet'
+import type { UnistylesServices as UnistylesServicesType } from './types'
+
 import { UnistylesListener } from './listener'
 import { UnistylesRegistry } from './registry'
 import { UnistylesRuntime } from './runtime'
@@ -33,9 +38,59 @@ declare global {
     var __unistyles__: UnistylesServices
 }
 
-if (isServer() && !globalThis.__unistyles__) {
-    // @ts-ignore
-    globalThis.__unistyles__ = new UnistylesServices()
+const createServices = () => new UnistylesServices()
+const serverReact = React as typeof React & {
+    cache?: <T>(factory: () => T) => () => T
+    cacheSignal?: () => AbortSignal | null
+}
+const cache = serverReact.cache ?? (<T>(factory: () => T) => factory)
+const getCachedServerServices = cache(createServices)
+
+const getGlobalServerServices = () => {
+    if (!globalThis.__unistyles__) {
+        globalThis.__unistyles__ = createServices()
+    }
+
+    return globalThis.__unistyles__
 }
 
-export const services = isServer() ? globalThis.__unistyles__ : new UnistylesServices()
+const getServerServices = () => {
+    const globalServices = getGlobalServerServices()
+
+    if (!serverReact.cache || (serverReact.cacheSignal && !serverReact.cacheSignal())) {
+        return globalServices
+    }
+
+    const firstServices = getCachedServerServices()
+
+    // React's regular renderer treats cache as a pass-through. RSC renderers
+    // return the same value within a request and invalidate it between requests.
+    if (!serverReact.cacheSignal && firstServices !== getCachedServerServices()) {
+        return globalServices
+    }
+
+    if (globalServices.state.isInitialized && !firstServices.state.isInitialized) {
+        firstServices.state.init(globalServices.state.getConfig())
+    }
+
+    return firstServices
+}
+
+const serverServices = new Proxy({} as UnistylesServicesType, {
+    get: (_, property: keyof UnistylesServicesType) => getServerServices()[property],
+})
+
+export const services = isServer() ? serverServices : createServices()
+
+export const configureServices = (config: UnistylesConfig) => {
+    if (!isServer()) {
+        services.state.init(config)
+
+        return
+    }
+
+    const globalServices = getGlobalServerServices()
+
+    globalServices.state.init(config)
+    getServerServices().state.init(config)
+}
