@@ -115,24 +115,35 @@ export class CSSState {
     }
 
     getStylesForHashes = (hashes: Iterable<string>) => {
-        const hashSet = new Set(hashes)
+        const uniqueHashes = Array.from(new Set(hashes))
 
-        if (hashSet.size === 0) {
+        if (uniqueHashes.length === 0) {
             return ''
         }
 
-        return this.getRuleStyles((className) =>
-            Array.from(hashSet).some(
+        const getMatchingHash = (className: string) =>
+            uniqueHashes.find(
                 (hash) =>
                     className === hash ||
                     className.startsWith(`${hash}:`) ||
                     className.startsWith(`${hash}::`) ||
                     className.startsWith(`${hash} >`),
-            ),
+            )
+
+        return this.getRuleStyles(
+            (className) => Boolean(getMatchingHash(className)),
+            (className) => {
+                const hash = getMatchingHash(className)
+
+                return hash ? `.${hash}.${className}` : `.${className}`
+            },
         )
     }
 
-    private getRuleStyles = (shouldInclude: (className: string) => boolean = () => true) => {
+    private getRuleStyles = (
+        shouldInclude: (className: string) => boolean = () => true,
+        getSelector: (className: string) => string = (className) => `.${className}`,
+    ) => {
         let styles = ''
 
         const generate = (mediaQuery: string, secondLevelMap: Map<string, Map<string, string>>) => {
@@ -143,7 +154,7 @@ export class CSSState {
                     continue
                 }
 
-                rules += `.${className}{`
+                rules += `${getSelector(className)}{`
 
                 for (const [propertyKey, value] of thirdLevelMap) {
                     if (value === undefined) {

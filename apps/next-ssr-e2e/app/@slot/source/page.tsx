@@ -15,6 +15,7 @@ const styles = StyleSheet.create(theme => ({
     card: {
         backgroundColor: '#123456',
         borderRadius: 13,
+        flexDirection: 'row',
         padding: 17,
     },
     label: {

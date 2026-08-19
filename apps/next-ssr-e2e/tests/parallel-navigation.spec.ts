@@ -62,6 +62,7 @@ test('keeps server-generated styles across parallel route navigation', async ({ 
         backgroundColor: 'rgb(18, 52, 86)',
         missingClasses: [],
     })
+    await expect(page.getByTestId('source-card')).toHaveCSS('flex-direction', 'row')
     await expect(page.getByTestId('source-label')).toHaveCSS('color', 'rgb(254, 220, 186)')
 
     await page.getByRole('link', { name: 'Open destination route' }).click()
@@ -72,6 +73,7 @@ test('keeps server-generated styles across parallel route navigation', async ({ 
         backgroundColor: 'rgb(101, 67, 33)',
         missingClasses: [],
     })
+    await expect(page.getByTestId('destination-card')).toHaveCSS('flex-direction', 'row')
     await expect(page.getByTestId('late-card')).toBeVisible()
     await expect(auditStyles(page, 'late-card')).resolves.toMatchObject({
         backgroundColor: 'rgb(36, 104, 19)',
@@ -111,6 +113,7 @@ test('keeps server-generated styles across parallel route navigation', async ({ 
         backgroundColor: 'rgb(18, 52, 86)',
         missingClasses: [],
     })
+    await expect(page.getByTestId('source-card')).toHaveCSS('flex-direction', 'row')
 
     const routeStyleResources = await readUnistylesStyleResources(page)
 
@@ -129,6 +132,7 @@ test('includes destination server styles on a hard reload', async ({ page }) => 
         backgroundColor: 'rgb(101, 67, 33)',
         missingClasses: [],
     })
+    await expect(page.getByTestId('destination-card')).toHaveCSS('flex-direction', 'row')
 })
 
 test('isolates styles between concurrent server renders', async ({ request }) => {

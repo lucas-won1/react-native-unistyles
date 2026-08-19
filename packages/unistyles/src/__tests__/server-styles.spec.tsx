@@ -51,6 +51,11 @@ describe('ServerUnistylesStyles', () => {
             value: 'white',
         })
         unistyles.services.registry.css.set({
+            className: 'unistyles_selected > *',
+            propertyKey: 'display',
+            value: 'flex',
+        })
+        unistyles.services.registry.css.set({
             className: 'unistyles_other',
             propertyKey: 'color',
             value: 'black',
@@ -71,8 +76,10 @@ describe('ServerUnistylesStyles', () => {
         })
 
         expect(unistyles.services.registry.css.getStylesForHashes(['unistyles_selected'])).toBe(
-            '.unistyles_selected{background-color:tomato;}.unistyles_selected:first-child{color:white;}' +
-                '@media (min-width: 768px){.unistyles_selected{padding:12px;}}',
+            '.unistyles_selected.unistyles_selected{background-color:tomato;}' +
+                '.unistyles_selected.unistyles_selected:first-child{color:white;}' +
+                '.unistyles_selected.unistyles_selected > *{display:flex;}' +
+                '@media (min-width: 768px){.unistyles_selected.unistyles_selected{padding:12px;}}',
         )
     })
 })
