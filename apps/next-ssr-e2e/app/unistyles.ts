@@ -3,6 +3,8 @@ import { StyleSheet } from 'react-native-unistyles'
 const lightTheme = {
     colors: {
         background: '#ffffff',
+        clientCard: '#112233',
+        clientCardLabel: '#ffffff',
         text: '#111111',
     },
 }

@@ -11,12 +11,12 @@ export function ClientCard() {
     )
 }
 
-const styles = StyleSheet.create({
+const styles = StyleSheet.create(theme => ({
     card: {
-        backgroundColor: '#112233',
+        backgroundColor: theme.colors.clientCard,
         padding: 8,
     },
     label: {
-        color: '#ffffff',
+        color: theme.colors.clientCardLabel,
     },
-})
+}))
