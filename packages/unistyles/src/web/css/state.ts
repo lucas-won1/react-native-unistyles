@@ -111,28 +111,56 @@ export class CSSState {
             return acc + themeCss
         }, '')
 
+        return styles + this.getRuleStyles()
+    }
+
+    getStylesForHashes = (hashes: Iterable<string>) => {
+        const hashSet = new Set(hashes)
+
+        if (hashSet.size === 0) {
+            return ''
+        }
+
+        return this.getRuleStyles((className) =>
+            Array.from(hashSet).some(
+                (hash) =>
+                    className === hash ||
+                    className.startsWith(`${hash}:`) ||
+                    className.startsWith(`${hash}::`) ||
+                    className.startsWith(`${hash} >`),
+            ),
+        )
+    }
+
+    private getRuleStyles = (shouldInclude: (className: string) => boolean = () => true) => {
+        let styles = ''
+
         const generate = (mediaQuery: string, secondLevelMap: Map<string, Map<string, string>>) => {
-            if (mediaQuery) {
-                styles += `${mediaQuery}{`
-            }
+            let rules = ''
 
             for (const [className, thirdLevelMap] of secondLevelMap) {
-                styles += `.${className}{`
+                if (!shouldInclude(className)) {
+                    continue
+                }
+
+                rules += `.${className}{`
 
                 for (const [propertyKey, value] of thirdLevelMap) {
                     if (value === undefined) {
                         continue
                     }
 
-                    styles += `${hyphenate(propertyKey)}:${value};`
+                    rules += `${hyphenate(propertyKey)}:${value};`
                 }
 
-                styles += '}'
+                rules += '}'
             }
 
-            if (mediaQuery) {
-                styles += '}'
+            if (!rules) {
+                return
             }
+
+            styles += mediaQuery ? `${mediaQuery}{${rules}}` : rules
         }
 
         for (const [mediaQuery, secondLevelMap] of this.mainMap) {

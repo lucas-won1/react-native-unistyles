@@ -8,6 +8,7 @@ import { copyComponentProperties } from '../utils'
 import { isServer } from '../web/utils'
 import { createUnistylesRef } from '../web/utils/createUnistylesRef'
 import { getClassName } from './getClassname'
+import { getServerUnistylesStyle } from './ServerUnistylesStyle'
 import { maybeWarnAboutMultipleUnistyles } from './warn'
 
 const STYLE_PROPS = ['contentContainerStyle', 'columnWrapperStyle'] as const
@@ -39,7 +40,19 @@ const buildUnistylesProps = (Component: any, props: ComponentProps, forwardedRef
 
 export const createUnistylesElement = (Component: any) => {
     const UnistylesComponent = (props: any) => {
-        return <Component {...props} {...buildUnistylesProps(Component, props, props.ref)} />
+        const unistylesProps = buildUnistylesProps(Component, props, props.ref)
+        const serverStyle = getServerUnistylesStyle(Object.values(unistylesProps))
+
+        if (serverStyle) {
+            return (
+                <>
+                    {serverStyle}
+                    <Component {...props} {...unistylesProps} />
+                </>
+            )
+        }
+
+        return <Component {...props} {...unistylesProps} />
     }
 
     return copyComponentProperties(Component, UnistylesComponent)
