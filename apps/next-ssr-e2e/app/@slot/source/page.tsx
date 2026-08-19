@@ -1,18 +1,13 @@
+import { Text, View } from 'react-native'
 import { StyleSheet } from 'react-native-unistyles'
-import { ServerUnistylesStyles } from 'react-native-unistyles/server'
-import { getWebProps } from 'react-native-unistyles/web'
 
 export default function SourceSlot() {
-    const cardProps = getWebProps(styles.card)
-    const labelProps = getWebProps(styles.label)
-
     return (
-        <>
-            <section className={cardProps.className} data-testid="source-card">
-                <span className={labelProps.className}>Source server slot</span>
-            </section>
-            <ServerUnistylesStyles />
-        </>
+        <View style={styles.card} testID="source-card">
+            <Text style={styles.label} testID="source-label">
+                Source server slot
+            </Text>
+        </View>
     )
 }
 
@@ -25,5 +20,10 @@ const styles = StyleSheet.create(theme => ({
     label: {
         color: theme.colors.background,
         fontSize: 19,
+        _web: {
+            '_first-child': {
+                color: '#fedcba',
+            },
+        },
     },
 }))

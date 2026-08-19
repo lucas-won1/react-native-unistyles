@@ -1,18 +1,19 @@
+import { Suspense } from 'react'
+import { Text, View } from 'react-native'
 import { StyleSheet } from 'react-native-unistyles'
-import { ServerUnistylesStyles } from 'react-native-unistyles/server'
-import { getWebProps } from 'react-native-unistyles/web'
+
+import { ClientCard } from './ClientCard'
+import { LateCard } from './LateCard'
 
 export default function DestinationSlot() {
-    const cardProps = getWebProps(styles.card)
-    const labelProps = getWebProps(styles.label)
-
     return (
-        <>
-            <section className={cardProps.className} data-testid="destination-card">
-                <span className={labelProps.className}>Destination server slot</span>
-            </section>
-            <ServerUnistylesStyles />
-        </>
+        <View style={styles.card} testID="destination-card">
+            <Text style={styles.label}>Destination server slot</Text>
+            <ClientCard />
+            <Suspense fallback={<Text>Loading late server card</Text>}>
+                <LateCard />
+            </Suspense>
+        </View>
     )
 }
 
