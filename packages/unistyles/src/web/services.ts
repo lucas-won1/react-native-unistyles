@@ -46,7 +46,7 @@ const serverReact = React as typeof React & {
 const cache = serverReact.cache ?? (<T>(factory: () => T) => factory)
 const getCachedServerServices = cache(createServices)
 
-const getGlobalServerServices = () => {
+const getGlobalServices = () => {
     if (!globalThis.__unistyles__) {
         globalThis.__unistyles__ = createServices()
     }
@@ -55,7 +55,7 @@ const getGlobalServerServices = () => {
 }
 
 const getServerServices = () => {
-    const globalServices = getGlobalServerServices()
+    const globalServices = getGlobalServices()
 
     if (!serverReact.cache || (serverReact.cacheSignal && !serverReact.cacheSignal())) {
         return globalServices
@@ -80,7 +80,10 @@ const serverServices = new Proxy({} as UnistylesServicesType, {
     get: (_, property: keyof UnistylesServicesType) => getServerServices()[property],
 })
 
-export const services = isServer() ? serverServices : createServices()
+// Next.js can evaluate the package root and subpath exports in separate client
+// module graphs. Keep one browser runtime so every entrypoint observes the same
+// configuration, stylesheet registry, and hydration state.
+export const services = isServer() ? serverServices : getGlobalServices()
 
 export const configureServices = (config: UnistylesConfig) => {
     if (!isServer()) {
@@ -89,7 +92,7 @@ export const configureServices = (config: UnistylesConfig) => {
         return
     }
 
-    const globalServices = getGlobalServerServices()
+    const globalServices = getGlobalServices()
 
     globalServices.state.init(config)
     getServerServices().state.init(config)
