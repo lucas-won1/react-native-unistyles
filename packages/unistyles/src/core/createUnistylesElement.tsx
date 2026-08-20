@@ -1,6 +1,7 @@
 import type { ViewStyle } from 'react-native'
 
 import React from 'react'
+import { getServerUnistylesStyle } from 'react-native-unistyles/internal/server-unistyles-style'
 
 import type { UnistylesValues } from '../types'
 
@@ -8,7 +9,6 @@ import { copyComponentProperties } from '../utils'
 import { isServer } from '../web/utils'
 import { createUnistylesRef } from '../web/utils/createUnistylesRef'
 import { getClassName } from './getClassname'
-import { getServerUnistylesStyle } from './ServerUnistylesStyle'
 import { maybeWarnAboutMultipleUnistyles } from './warn'
 
 const STYLE_PROPS = ['contentContainerStyle', 'columnWrapperStyle'] as const

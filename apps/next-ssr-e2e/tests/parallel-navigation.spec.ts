@@ -7,7 +7,7 @@ type StyleAudit = {
 }
 
 const auditStyles = (page: Page, testId: string) =>
-    page.getByTestId(testId).evaluate<StyleAudit>(element => {
+    page.getByTestId(testId).evaluate(element => {
         const classNames = Array.from(element.classList).filter(className => className.startsWith('unistyles_'))
         const cssText = Array.from(document.styleSheets)
             .map(styleSheet => {
@@ -25,7 +25,7 @@ const auditStyles = (page: Page, testId: string) =>
             backgroundColor: getComputedStyle(element).backgroundColor,
             classNames,
             missingClasses: classNames.filter(className => !cssText.includes(`.${className}`)),
-        }
+        } satisfies StyleAudit
     })
 
 const readUnistylesStyleResources = (page: Page) =>
@@ -51,6 +51,32 @@ const readMissingUnistylesClasses = (page: Page) =>
         return Array.from(new Set(classNames)).filter((className) => !cssText.includes(`.${className}`))
     })
 
+const hasStableStylesheetOrder = (page: Page) =>
+    page.evaluate(() => {
+        const headChildren = Array.from(document.head.children)
+        const rnwStyle = document.getElementById('react-native-stylesheet')
+        const anchor = document.getElementById('unistyles-resource-anchor')
+        const runtimeStyle = document.getElementById('unistyles-web')
+        const resources = Array.from(
+            document.head.querySelectorAll('style[data-precedence="unistyles"],link[data-precedence="unistyles"]'),
+        ).filter(resource => resource !== anchor)
+        const rnwIndex = rnwStyle ? headChildren.indexOf(rnwStyle) : -1
+        const anchorIndex = anchor ? headChildren.indexOf(anchor) : -1
+        const runtimeIndex = runtimeStyle ? headChildren.indexOf(runtimeStyle) : -1
+
+        return (
+            rnwIndex !== -1 &&
+            resources.length > 0 &&
+            resources.every(resource => {
+                const resourceIndex = headChildren.indexOf(resource)
+
+                return rnwIndex < resourceIndex && resourceIndex < runtimeIndex
+            }) &&
+            rnwIndex < anchorIndex &&
+            anchorIndex < runtimeIndex
+        )
+    })
+
 test('keeps server-generated styles across parallel route navigation', async ({ page }) => {
     const pageErrors: Array<string> = []
 
@@ -64,6 +90,7 @@ test('keeps server-generated styles across parallel route navigation', async ({ 
     })
     await expect(page.getByTestId('source-card')).toHaveCSS('flex-direction', 'row')
     await expect(page.getByTestId('source-label')).toHaveCSS('color', 'rgb(254, 220, 186)')
+    await expect(hasStableStylesheetOrder(page)).resolves.toBe(true)
 
     await page.getByRole('link', { name: 'Open destination route' }).click()
 
@@ -91,6 +118,7 @@ test('keeps server-generated styles across parallel route navigation', async ({ 
         backgroundColor: 'rgb(17, 34, 51)',
         missingClasses: [],
     })
+    await expect(hasStableStylesheetOrder(page)).resolves.toBe(true)
     const clientClassNames = await page.getByTestId('client-card').evaluate((element) =>
         Array.from(element.classList).filter((className) => className.startsWith('unistyles_')),
     )
@@ -133,6 +161,139 @@ test('includes destination server styles on a hard reload', async ({ page }) => 
         missingClasses: [],
     })
     await expect(page.getByTestId('destination-card')).toHaveCSS('flex-direction', 'row')
+    await expect(hasStableStylesheetOrder(page)).resolves.toBe(true)
+})
+
+test('runtime theme updates override a persisted RSC stylesheet resource', async ({ page }) => {
+    await page.goto('/cascade')
+
+    const serverCard = page.getByTestId('cascade-server-card')
+    const clientCard = page.getByTestId('cascade-client-card')
+
+    await expect(serverCard).toHaveCSS('background-color', 'rgb(194, 65, 12)')
+    await expect(clientCard).toHaveCSS('background-color', 'rgb(194, 65, 12)')
+    await expect(serverCard).toHaveCSS('border-radius', '27px')
+    await expect(clientCard).toHaveCSS('border-radius', '27px')
+    await expect(serverCard).toHaveClass(/\bauthor-cascade-override\b/)
+    await expect(clientCard).toHaveClass(/\bauthor-cascade-override\b/)
+
+    const sharedClassName = await serverCard.evaluate(element =>
+        Array.from(element.classList).find(className => className.startsWith('unistyles_')),
+    )
+
+    if (!sharedClassName) {
+        throw new Error('Expected the server card to have a Unistyles class')
+    }
+
+    await expect(clientCard).toHaveClass(new RegExp(`\\b${sharedClassName}\\b`))
+
+    const initialResourceCSS = await page
+        .locator('style[data-precedence="unistyles"]')
+        .evaluateAll(styleElements => styleElements.map(styleElement => styleElement.textContent ?? '').join('\n'))
+
+    expect(initialResourceCSS).toContain(`.${sharedClassName}`)
+    expect(initialResourceCSS).toContain('background-color:#c2410c')
+
+    await page.getByRole('button', { name: 'Switch to dark theme' }).click()
+
+    await expect(serverCard).toHaveCSS('background-color', 'rgb(14, 116, 144)')
+    await expect(clientCard).toHaveCSS('background-color', 'rgb(14, 116, 144)')
+    await expect(serverCard).toHaveCSS('border-radius', '27px')
+    await expect(clientCard).toHaveCSS('border-radius', '27px')
+
+    const cascadeState = await page.evaluate(className => {
+        const runtimeStyle = document.querySelector<HTMLStyleElement>('style#unistyles-web')
+        const resources = Array.from(
+            document.head.querySelectorAll<HTMLStyleElement | HTMLLinkElement>(
+                'style[data-precedence="unistyles"],link[data-precedence="unistyles"]',
+            ),
+        )
+        const headChildren = Array.from(document.head.children)
+        const runtimeIndex = runtimeStyle ? headChildren.indexOf(runtimeStyle) : -1
+
+        return {
+            resourceStillHasLightRule: resources.some(
+                resource =>
+                    resource.textContent?.includes(`.${className}`) &&
+                    resource.textContent.includes('background-color:#c2410c'),
+            ),
+            runtimeAfterResources:
+                runtimeIndex !== -1 && resources.every(resource => headChildren.indexOf(resource) < runtimeIndex),
+            runtimeHasDarkRule:
+                runtimeStyle?.textContent?.includes(`.${className}`) === true &&
+                runtimeStyle.textContent.includes('background-color:#0e7490'),
+        }
+    }, sharedClassName)
+
+    expect(cascadeState).toEqual({
+        resourceStillHasLightRule: true,
+        runtimeAfterResources: true,
+        runtimeHasDarkRule: true,
+    })
+})
+
+test('a late RSC stylesheet resource stays behind an existing runtime theme rule', async ({ page }) => {
+    await page.goto('/cascade/client')
+
+    const clientCard = page.getByTestId('late-resource-client-card')
+
+    await expect(clientCard).toHaveCSS('background-color', 'rgb(194, 65, 12)')
+
+    const sharedClassName = await clientCard.evaluate(element =>
+        Array.from(element.classList).find(className => className.startsWith('unistyles_')),
+    )
+
+    if (!sharedClassName) {
+        throw new Error('Expected the client card to have a Unistyles class')
+    }
+
+    const initialResourceCSS = await page
+        .locator('style[data-precedence="unistyles"]')
+        .evaluateAll(styleElements => styleElements.map(styleElement => styleElement.textContent ?? '').join('\n'))
+
+    expect(initialResourceCSS).not.toContain(`.${sharedClassName}`)
+
+    await page.getByRole('button', { name: 'Switch to dark before navigation' }).click()
+    await expect(clientCard).toHaveCSS('background-color', 'rgb(14, 116, 144)')
+
+    await page.getByRole('link', { name: 'Open late RSC resource' }).click()
+
+    await expect(page).toHaveURL('/cascade/server')
+
+    const serverCard = page.getByTestId('late-resource-server-card')
+
+    await expect(serverCard).toHaveClass(new RegExp(`\\b${sharedClassName}\\b`))
+    await expect(serverCard).toHaveCSS('background-color', 'rgb(14, 116, 144)')
+
+    const lateResourceState = await page.evaluate(className => {
+        const runtimeStyle = document.querySelector<HTMLStyleElement>('style#unistyles-web')
+        const resources = Array.from(
+            document.head.querySelectorAll<HTMLStyleElement | HTMLLinkElement>(
+                'style[data-precedence="unistyles"],link[data-precedence="unistyles"]',
+            ),
+        )
+        const headChildren = Array.from(document.head.children)
+        const runtimeIndex = runtimeStyle ? headChildren.indexOf(runtimeStyle) : -1
+
+        return {
+            lateResourceHasLightRule: resources.some(
+                resource =>
+                    resource.textContent?.includes(`.${className}`) &&
+                    resource.textContent.includes('background-color:#c2410c'),
+            ),
+            runtimeAfterResources:
+                runtimeIndex !== -1 && resources.every(resource => headChildren.indexOf(resource) < runtimeIndex),
+            runtimeHasDarkRule:
+                runtimeStyle?.textContent?.includes(`.${className}`) === true &&
+                runtimeStyle.textContent.includes('background-color:#0e7490'),
+        }
+    }, sharedClassName)
+
+    expect(lateResourceState).toEqual({
+        lateResourceHasLightRule: true,
+        runtimeAfterResources: true,
+        runtimeHasDarkRule: true,
+    })
 })
 
 test('isolates styles between concurrent server renders', async ({ request }) => {

@@ -2,11 +2,14 @@ import type { PressableProps as Props, View } from 'react-native'
 
 import React, { forwardRef } from 'react'
 import { Pressable as NativePressableReactNative } from 'react-native'
+import {
+    getServerUnistylesStyle,
+    isReactServerComponentRender,
+} from 'react-native-unistyles/internal/server-unistyles-style'
 
 import type { UnistylesValues } from '../../types'
 
 import { getClassName } from '../../core/getClassname'
-import { getServerUnistylesStyle, isReactServerComponentRender } from '../../core/ServerUnistylesStyle'
 import { UnistylesShadowRegistry } from '../../specs'
 import { isServer } from '../../web/utils'
 

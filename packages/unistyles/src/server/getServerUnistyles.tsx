@@ -2,6 +2,7 @@ import React from 'react'
 import { StyleSheet } from 'react-native'
 
 import * as unistyles from '../web/services'
+import { UNISTYLES_PRECEDENCE, UNISTYLES_RESOURCE_ANCHOR_ID } from '../web/styleResource'
 import { error, isServer } from '../web/utils'
 import { serialize } from './serialize'
 import { DefaultServerUnistylesSettings, type ServerUnistylesSettings } from './types'
@@ -21,6 +22,7 @@ export const getServerUnistyles = ({
     return (
         <>
             {rnwStyle && <style id="rnw-style">{rnwStyle}</style>}
+            <style data-precedence={UNISTYLES_PRECEDENCE} id={UNISTYLES_RESOURCE_ANCHOR_ID} />
             <style id="unistyles-web">{css}</style>
             {/* biome-ignore lint/security/noDangerouslySetInnerHtml: Needs the json quotes to be unescaped */}
             <script

@@ -1,10 +1,10 @@
 import React, { type ComponentProps, forwardRef } from 'react'
 import { type ImageStyle, Image as NativeImage, type StyleProp, type ViewStyle } from 'react-native'
+import { getServerUnistylesStyle } from 'react-native-unistyles/internal/server-unistyles-style'
 
 import type { UnistylesValues } from '../../types'
 
 import { getClassName } from '../../core/getClassname'
-import { getServerUnistylesStyle } from '../../core/ServerUnistylesStyle'
 import { maybeWarnAboutMultipleUnistyles } from '../../core/warn'
 import { copyComponentProperties } from '../../utils'
 import { checkForProp } from '../../web/utils'
