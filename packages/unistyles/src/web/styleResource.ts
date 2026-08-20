@@ -1,28 +1,30 @@
-const STYLE_RESOURCE_ID = Symbol.for('react-native-unistyles.style-resource-id')
+const STYLE_RESOURCE_IDS = Symbol.for('react-native-unistyles.style-resource-ids')
+
+type StyleResourceGlobal = typeof globalThis & {
+    [STYLE_RESOURCE_IDS]?: WeakMap<object, string>
+}
+
+const styleResourceGlobal = globalThis as StyleResourceGlobal
+const styleResourceIds = styleResourceGlobal[STYLE_RESOURCE_IDS] ?? new WeakMap<object, string>()
+
+styleResourceGlobal[STYLE_RESOURCE_IDS] = styleResourceIds
 
 export const UNISTYLES_PRECEDENCE = 'unistyles'
 export const UNISTYLES_RESOURCE_ANCHOR_ID = 'unistyles-resource-anchor'
-
-type StyleResourceMetadata = {
-    [STYLE_RESOURCE_ID]?: string
-}
 
 export const getStyleResourceId = (metadata: unknown) => {
     if (typeof metadata !== 'object' || metadata === null) {
         return undefined
     }
 
-    return (metadata as StyleResourceMetadata)[STYLE_RESOURCE_ID]
+    return styleResourceIds.get(metadata)
 }
 
 export const setStyleResourceId = <T extends object>(metadata: T, resourceId: string) => {
-    // React Native Web interprets enumerable metadata keys as generated classes.
-    Object.defineProperty(metadata, STYLE_RESOURCE_ID, {
-        configurable: false,
-        enumerable: false,
-        value: resourceId,
-        writable: false,
-    })
+    // Keep exact rule ownership outside React Native Web style metadata. Even a
+    // non-enumerable Symbol is rejected by React Flight when the metadata is
+    // passed from a Server Component to a Client Component.
+    styleResourceIds.set(metadata, resourceId)
 
     return metadata
 }

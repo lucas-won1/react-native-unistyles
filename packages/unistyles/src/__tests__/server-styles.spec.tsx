@@ -308,5 +308,19 @@ describe('ServerUnistylesStyles', () => {
         expect(metadata.hash).not.toContain(' > *')
         expect(getStyleResourceId(metadata)).toBe('unistyles_child > *')
         expect(Object.keys(metadata)).toEqual(['$$css', 'hash', 'injectedClassName'])
+        expect(Object.getOwnPropertySymbols(metadata)).toEqual([])
+    })
+
+    it('shares exact resource metadata across duplicate module evaluations', () => {
+        const metadata = setStyleResourceId(
+            { $$css: true, hash: 'unistyles_shared', injectedClassName: '' },
+            'unistyles_shared > *',
+        )
+
+        jest.isolateModules(() => {
+            const isolatedStyleResource = require('../web/styleResource') as typeof import('../web/styleResource')
+
+            expect(isolatedStyleResource.getStyleResourceId(metadata)).toBe('unistyles_shared > *')
+        })
     })
 })
