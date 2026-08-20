@@ -10,7 +10,8 @@ import './unistyles'
 export const Style = ({ children }: PropsWithChildren) => {
     const isServerInserted = useRef(false)
     const unistyles = useServerUnistyles({
-        includeRNWStyles: false,
+        includeRNWStyles: true,
+        layerRNWStyles: true,
     })
 
     useServerInsertedHTML(() => {

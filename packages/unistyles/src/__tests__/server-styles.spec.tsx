@@ -1,5 +1,6 @@
 import React from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
+import { StyleSheet } from 'react-native'
 
 import { getServerUnistylesStyle } from '../core/ServerUnistylesStyle'
 import { getServerUnistyles, ServerUnistylesStyles } from '../server'
@@ -35,6 +36,38 @@ describe('ServerUnistylesStyles', () => {
 
         expect(anchorIndex).toBeGreaterThan(-1)
         expect(runtimeStyleIndex).toBeGreaterThan(anchorIndex)
+    })
+
+    it('keeps legacy RNW output by default and layers it for RSC adapters', () => {
+        const originalGetSheetDescriptor = Object.getOwnPropertyDescriptor(StyleSheet, 'getSheet')
+
+        Object.defineProperty(StyleSheet, 'getSheet', {
+            configurable: true,
+            value: () => ({
+                textContent: '.css-view{position:relative;}.r-position-sticky{position:sticky;}',
+            }),
+        })
+
+        let legacyMarkup = ''
+        let layeredMarkup = ''
+
+        try {
+            legacyMarkup = renderToStaticMarkup(getServerUnistyles())
+            layeredMarkup = renderToStaticMarkup(getServerUnistyles({ layerRNWStyles: true }))
+        } finally {
+            if (originalGetSheetDescriptor) {
+                Object.defineProperty(StyleSheet, 'getSheet', originalGetSheetDescriptor)
+            } else {
+                Reflect.deleteProperty(StyleSheet, 'getSheet')
+            }
+        }
+
+        expect(legacyMarkup).toContain(
+            '<style id="rnw-style">.css-view{position:relative;}.r-position-sticky{position:sticky;}</style>',
+        )
+        expect(layeredMarkup).toContain(
+            '@layer react-native-unistyles-rnw{.css-view{position:relative;}.r-position-sticky{position:sticky;}}',
+        )
     })
 
     it('does not emit RSC resources during regular component SSR', () => {

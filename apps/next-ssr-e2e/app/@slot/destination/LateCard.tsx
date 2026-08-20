@@ -51,7 +51,9 @@ const styles = StyleSheet.create({
     image: {
         backgroundColor: '#abcdef',
         height: 12,
+        overflow: 'visible',
         width: 12,
+        zIndex: 7,
     },
     pressable: {
         backgroundColor: '#765432',

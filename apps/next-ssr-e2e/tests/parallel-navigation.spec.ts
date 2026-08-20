@@ -55,6 +55,7 @@ const hasStableStylesheetOrder = (page: Page) =>
     page.evaluate(() => {
         const headChildren = Array.from(document.head.children)
         const rnwStyle = document.getElementById('react-native-stylesheet')
+        const serverRNWStyle = document.getElementById('rnw-style')
         const anchor = document.getElementById('unistyles-resource-anchor')
         const runtimeStyle = document.getElementById('unistyles-web')
         const resources = Array.from(
@@ -67,6 +68,7 @@ const hasStableStylesheetOrder = (page: Page) =>
         return (
             rnwIndex !== -1 &&
             resources.length > 0 &&
+            serverRNWStyle?.textContent?.startsWith('@layer react-native-unistyles-rnw{') === true &&
             resources.every(resource => {
                 const resourceIndex = headChildren.indexOf(resource)
 
@@ -110,6 +112,8 @@ test('keeps server-generated styles across parallel route navigation', async ({ 
         backgroundColor: 'rgb(171, 205, 239)',
         missingClasses: [],
     })
+    await expect(page.getByTestId('late-image')).toHaveCSS('overflow', 'visible')
+    await expect(page.getByTestId('late-image')).toHaveCSS('z-index', '7')
     await expect(auditStyles(page, 'late-pressable')).resolves.toMatchObject({
         backgroundColor: 'rgb(118, 84, 50)',
         missingClasses: [],
